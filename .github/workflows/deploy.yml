@@ -1,0 +1,29 @@
+name: Embedded Project CI/CD
+
+# 언제 실행할 것인가?
+on:
+  push:
+    branches: [ main ]  # main 브랜치에 코드가 올라올 때마다
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # GitHub 서버가 내 우분투에 접속해서 명령어를 내리는 부분
+      - name: Execute Remote Commands
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          # Cloudflare Tunnel을 통해 접속하기 위한 필수 프록시 설정
+          proxy_command: "cloudflared access ssh-gen --hostname %h"
+          script: |
+            cd ~/test
+            git pull origin main
+            make clean
+            make
+            echo "자동 빌드가 성공적으로 끝났습니다!"
