@@ -1,36 +1,15 @@
-name: Remote Build and Deploy
-
-on:
-  push:
-    branches: [ main ]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # 1. GitHub 서버에 cloudflared 설치 (터널 접속용)
-      - name: Install cloudflared
-        run: |
-          curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-          sudo dpkg -i cloudflared.deb
-
-      # 2. SSH 접속 및 빌드 (proxy_command를 빼고, 가장 기본 설정만 사용)
-      - name: Execute Remote Commands
-        uses: appleboy/ssh-action@master
+- name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
-          # 터널링을 위해 필요한 내부 통로 설정
           proxy_host: ${{ secrets.HOST }}
           proxy_username: ${{ secrets.USERNAME }}
           proxy_password: ${{ secrets.PASSWORD }}
+          proxy_command: "cloudflared access ssh-gen --hostname %h"
           script: |
             cd ~/test
             git pull origin main
             make clean
             make
-            echo "드디어 자동 빌드 성공!"
