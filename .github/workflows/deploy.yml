@@ -11,23 +11,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 1. 터널 접속을 위한 도구 설치
       - name: Install cloudflared
         run: |
           curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared.deb
 
-      - name: Execute Remote Commands
+      # 2. 내 우분투 서버에 접속해서 명령어 실행
+      - name: SSH and Build
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
+          # 터널링을 위한 핵심 옵션 두 개만 남깁니다
           proxy_host: ${{ secrets.HOST }}
-          proxy_username: ${{ secrets.USERNAME }}
-          proxy_password: ${{ secrets.PASSWORD }}
           proxy_command: "cloudflared access ssh-gen --hostname %h"
           script: |
             cd ~/test
             git pull origin main
             make clean
             make
+            echo "드디어 자동화 성공!"
