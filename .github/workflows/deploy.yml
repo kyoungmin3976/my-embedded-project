@@ -11,32 +11,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. cloudflared 설치
+      # 1. GitHub 서버에 cloudflared 설치 (터널 접속용)
       - name: Install cloudflared
         run: |
           curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared.deb
 
-      # 2. SSH 설정 파일 생성 (터널 주소와 SSH를 강제로 연결)
-      - name: Setup SSH Config
-        run: |
-          mkdir -p ~/.ssh
-          echo "Host my-server
-            HostName ${{ secrets.HOST }}
-            ProxyCommand cloudflared access ssh-gen --hostname %h
-            StrictHostKeyChecking no" > ~/.ssh/config
-
-      # 3. 실제 접속 및 빌드 (애플보이 대신 직접 SSH 실행)
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      # 2. SSH 접속 및 빌드 (proxy_command를 빼고, 가장 기본 설정만 사용)
+      - name: Execute Remote Commands
+        uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
-          # 터널 전용 프록시 명령어를 직접 주입
-          proxy_command: "cloudflared access ssh-gen --hostname %h"
+          # 터널링을 위해 필요한 내부 통로 설정
+          proxy_host: ${{ secrets.HOST }}
+          proxy_username: ${{ secrets.USERNAME }}
+          proxy_password: ${{ secrets.PASSWORD }}
           script: |
             cd ~/test
             git pull origin main
             make clean
             make
+            echo "드디어 자동 빌드 성공!"
